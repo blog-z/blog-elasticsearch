@@ -1,0 +1,24 @@
+server:
+  port: 9080
+dubbo:
+  application:
+    name: blog-elasticsearch
+  registry:
+    address: zookeeper://127.0.0.1:2181
+  protocol:
+    name: dubbo
+    port: 20880
+  metadata-report:
+    address: zookeeper://127.0.0.1:2181
+  provider:
+    version: 1.0.0
+  scan:
+    base-packages: com.elasticsearch.service.impl
+spring:
+  elasticsearch:
+    rest:
+      uris: http://localhost:9201
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
