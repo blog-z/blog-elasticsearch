@@ -15,29 +15,8 @@
     <description>Demo project for Spring Boot</description>
 
     <properties>
-        <java.version>1.8</java.version>
-        <main.basedir>${project.basedir}</main.basedir>
-        <commons-lang3-version>3.7</commons-lang3-version>
-        <dubbo-version>2.7.2</dubbo-version>
-        <curator-version>2.12.0</curator-version>
-        <curator-test-version>4.1.0</curator-test-version>
-        <fastjson-version>1.2.46</fastjson-version>
-        <springfox-swagger-version>2.9.2</springfox-swagger-version>
-        <netty-version>4.1.30.Final</netty-version>
-        <jacoco-version>0.8.2</jacoco-version>
-        <jedis-version>2.9.0</jedis-version>
-        <apollo-version>1.2.0</apollo-version>
-        <nacos-version>1.0.0</nacos-version>
-        <guava-version>20.0</guava-version>
-        <snakeyaml-version>RELEASE1.24</snakeyaml-version>
-        <maven-checkstyle-plugin-version>3.0.0</maven-checkstyle-plugin-version>
-        <spring-boot-version>2.1.4.RELEASE</spring-boot-version>
-        <maven_compiler_version>3.6.0</maven_compiler_version>
-        <java_source_version>1.8</java_source_version>
-        <java_target_version>1.8</java_target_version>
-        <file_encoding>UTF-8</file_encoding>
-        <checkstyle.skip>true</checkstyle.skip>
-        <rat.skip>true</rat.skip>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -66,11 +45,21 @@
             <artifactId>transport-netty4-client</artifactId>
         </dependency>
         <!--dubbo-->
-
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo</artifactId>
+            <version>2.7.2</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-spring-boot-starter</artifactId>
             <version>2.7.1</version>
+        </dependency>
+        <!--dubbo api-->
+        <dependency>
+            <groupId>com.dubbo</groupId>
+            <artifactId>api</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
 
@@ -89,6 +78,7 @@
 
 
     </dependencies>
+
 
     <build>
         <plugins>

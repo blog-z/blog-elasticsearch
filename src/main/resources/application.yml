@@ -4,12 +4,10 @@ dubbo:
   application:
     name: blog-elasticsearch
   registry:
-    address: zookeeper://127.0.0.1:2181
+    address: zookeeper://127.0.0.1:21812
   protocol:
     name: dubbo
     port: 20880
-  metadata-report:
-    address: zookeeper://127.0.0.1:2181
   provider:
     version: 1.0.0
   scan:
