@@ -3,54 +3,100 @@ package com.elasticsearch.util;
 import com.dubbo.commons.ServerResponse;
 import com.dubbo.entity.Article;
 import com.dubbo.util.DateTimeUtil;
+import com.dubbo.util.JsonUtil;
+import com.elasticsearch.SerializableElasticsearch.GetResponseSerializable;
+import com.elasticsearch.SerializableElasticsearch.IndexResponseSerializable;
 import com.elasticsearch.config.ElasticsearchConfig;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.nio.entity.NStringEntity;
-import org.elasticsearch.client.Request;
+import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 
-public class ElasticsearchUtil {
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-    private static final Logger logger= LoggerFactory.getLogger(ElasticsearchConfig.class);
+public class ElasticsearchUtil{
 
-    //发表文章
-    public static ServerResponse setArticle(Article article){
-        String articleJson="{" +
-                "\"article_id\":\""+article.getArticleId()+"\"," +
-                "\"article_user_id\":\""+article.getArticleUserId()+"\"," +
-                "\"article_title\":\""+article.getArticleTitle()+"\"," +
-                "\"article_content\":\""+article.getArticleContent()+"\"," +
-                "\"create_time\":\""+ DateTimeUtil.dateToString(new Date()) +"\"," +
-                "\"update_time\":\""+DateTimeUtil.dateToString(new Date())+"\""+
-                "}";
+    private static final Logger logger= LoggerFactory.getLogger(ElasticsearchUtil.class);
 
-        // JSON格式字符串
-        HttpEntity entity = new NStringEntity(articleJson, ContentType.APPLICATION_JSON);
+
+    //IndexAPI
+    public static ServerResponse indexElasticsearch(Article article){
+        IndexResponse response = null;
         try {
-            ElasticsearchConfig.getLowRestClient().performRequest("post", "/" + "blog" +"/"+ "article" +"/"+article.getArticleId()+"/", Collections.EMPTY_MAP,entity);
+            response = ElasticsearchConfig.getTransportClient().prepareIndex("blog", "article", article.getArticleId())
+                    .setSource(jsonBuilder()
+                            .startObject()
+                            .field("article_id", article.getArticleId())
+                            .field("article_user_id", article.getArticleUserId())
+                            .field("article_title", article.getArticleTitle())
+                            .field("article_content", article.getArticleContent())
+                            .field("create_time", DateTimeUtil.dateToString(new Date()))
+                            .field("update_time", DateTimeUtil.dateToString(new Date()))
+                            .endObject()
+                    )
+                    .get();
         } catch (IOException e) {
-            logger.info("插入数据失败！");
             e.printStackTrace();
-            return ServerResponse.createByErrorCodeMessage(0,"插入数据失败");
         }
-        return ServerResponse.createBySuccessMessage("插入数据成功！");
+        if (response!=null&&response.getShardInfo().getSuccessful()>0){
+            IndexResponseSerializable indexResponseSerializable =(IndexResponseSerializable)response;
+            return ServerResponse.createBySuccess("创建索引成功", indexResponseSerializable);
+        }else {
+            return ServerResponse.createByErrorMessage("创建索引失败");
+        }
     }
 
-    //删除文章
-    public static ServerResponse deleteArticle(String articleId){
-        try {
-            ElasticsearchConfig.getLowRestClient().performRequest(new Request("delete","/blog/article/"+articleId));
-        }catch (IOException e){
-            logger.info("删除数据失败！");
-            e.printStackTrace();
-            return ServerResponse.createByErrorMessage("删除数据失败！");
-        }
-        return ServerResponse.createByErrorMessage("删除数据成功！");
+    //GET API
+    public static ServerResponse getElasticsearch(String articleId){
+        GetResponse response = ElasticsearchConfig.getTransportClient().prepareGet("blog", "article", articleId).get();
+        return ServerResponse.createBySuccess("查询索引成功");
     }
+
+    //DELETE AIP
+    public static ServerResponse deleteElasticsearch(String articleId){
+        DeleteResponse response = ElasticsearchConfig.getTransportClient().prepareDelete("blog", "article", articleId).get();
+
+        return ServerResponse.createBySuccess("删除索引成功",JsonUtil.objToStringPretty(response));
+    }
+
+    //UPDATE API
+    public static ServerResponse updateElasticsearch(Article article){
+        UpdateRequest updateRequest = new UpdateRequest();
+        updateRequest.index("blog");
+        updateRequest.type("article");
+        updateRequest.id(article.getArticleId());
+        try {
+            updateRequest.doc(jsonBuilder()
+                    .startObject()
+                    .field("article_id", article.getArticleId())
+                    .field("article_user_id", article.getArticleUserId())
+                    .field("article_title", article.getArticleTitle())
+                    .field("article_content",article.getArticleContent())
+                    .field("create_time",DateTimeUtil.dateToString(new Date()))
+                    .field("update_time",DateTimeUtil.dateToString(new Date()))
+                    .endObject());
+            ElasticsearchConfig.getTransportClient().update(updateRequest).get();
+        }  catch (InterruptedException | ExecutionException | IOException e) {
+            e.printStackTrace();
+            logger.info("-------更新失败------");
+        }
+        return ServerResponse.createBySuccessMessage("更新成功");
+    }
+
+    //search API
+    public static ServerResponse searchElasticsearch(String userInputText){
+        return null;
+    }
+
 }
+
+
+
+
+

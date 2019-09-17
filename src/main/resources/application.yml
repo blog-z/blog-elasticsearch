@@ -13,9 +13,6 @@ dubbo:
   scan:
     base-packages: com.elasticsearch.service.impl
 spring:
-  elasticsearch:
-    rest:
-      uris: http://localhost:9201
   servlet:
     multipart:
       max-file-size: 10MB

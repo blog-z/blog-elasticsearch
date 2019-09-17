@@ -34,21 +34,35 @@
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
+            <version>5.6.16</version>
         </dependency>
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-client</artifactId>
+            <artifactId>transport</artifactId>
+            <version>5.6.16</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>transport-netty4-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-        <!--netty-->
         <dependency>
             <groupId>org.elasticsearch.plugin</groupId>
             <artifactId>transport-netty4-client</artifactId>
+            <version>5.6.16</version>
         </dependency>
         <!--dubbo-->
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo</artifactId>
             <version>2.7.2</version>
+        </dependency>
+        <!--elasticsearch log4j-->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.11.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.dubbo</groupId>
@@ -72,9 +86,6 @@
             <version>2.7.1</version>
             <type>pom</type>
         </dependency>
-
-
-
 
 
     </dependencies>
