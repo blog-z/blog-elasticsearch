@@ -16,6 +16,12 @@ import org.apache.dubbo.config.annotation.Service;
 @Service(version = "${dubbo.provider.version}")
 public class ElasticsearchImpl implements ElasticsearchService {
 
+    //搜索文章
+    @Override
+    public ServerResponse searchArticle(String userInputText,int pageNum) {
+        return ElasticsearchUtil.searchElasticsearch(userInputText,pageNum);
+    }
+
     //更新文章
     @Override
     public ServerResponse updateArticle(Article article) {
