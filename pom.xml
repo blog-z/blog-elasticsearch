@@ -71,6 +71,12 @@
             <artifactId>api</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <!-- json-->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.24</version>
+        </dependency>
 
 
 

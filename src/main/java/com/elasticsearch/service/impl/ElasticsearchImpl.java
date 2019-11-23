@@ -6,6 +6,8 @@ import com.dubbo.entity.Article;
 import com.elasticsearch.util.ElasticsearchUtil;
 import org.apache.dubbo.config.annotation.Service;
 
+import java.util.List;
+
 /**
  * @program: blog-elasticsearch
  * @description: 实现dubbo方法
@@ -28,7 +30,6 @@ public class ElasticsearchImpl implements ElasticsearchService {
         return ElasticsearchUtil.updateElasticsearch(article);
     }
 
-
     //新增文章
     @Override
     public ServerResponse addArticle(Article article) {
@@ -41,10 +42,30 @@ public class ElasticsearchImpl implements ElasticsearchService {
         return ElasticsearchUtil.getElasticsearch(articleId);
     }
 
+    //查看自己已发表的文章
+    public ServerResponse getOwnArticle(List<String> articleIdList){
+        return ElasticsearchUtil.getOwnArticle(articleIdList);
+    }
+
     //删除文章
     @Override
     public ServerResponse deleteArticle(String articleId) {
         return ElasticsearchUtil.deleteElasticsearch(articleId);
+    }
+
+    //增加文章热点
+    public ServerResponse updateArticleHeat(String articleId,Integer articleHeat){
+        return ElasticsearchUtil.updateElasticsearchArticleHeat(articleId,articleHeat);
+    }
+
+    //首页推荐
+    public ServerResponse homeArticleInteger(Integer pageNum){
+        return ElasticsearchUtil.homeSearchElasticsearch(pageNum);
+    }
+
+    //得到文章标题
+    public String getArticleTitle(String articleId){
+        return ElasticsearchUtil.getArticleTitle(articleId);
     }
 
 }

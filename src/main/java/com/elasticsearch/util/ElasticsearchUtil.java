@@ -1,12 +1,15 @@
 package com.elasticsearch.util;
 
+import com.alibaba.fastjson.JSON;
 import com.dubbo.commons.Page;
 import com.dubbo.commons.SearchElasticsearchArticleJson;
 import com.dubbo.commons.ServerResponse;
 import com.dubbo.entity.Article;
 import com.dubbo.util.DateTimeUtil;
 import com.dubbo.util.JsonUtil;
-import com.elasticsearch.SerializableElasticsearch.*;
+import com.elasticsearch.SerializableElasticsearch.ElasticsearchResponse;
+import com.elasticsearch.SerializableElasticsearch.ElasticsearchResult;
+import com.elasticsearch.SerializableElasticsearch.ElasticsearchShardInfo;
 import com.elasticsearch.config.ElasticsearchConfig;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -21,12 +24,11 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -45,8 +47,9 @@ public class ElasticsearchUtil{
                             .field("article_user_id", article.getArticleUserId())
                             .field("article_title", article.getArticleTitle())
                             .field("article_content", article.getArticleContent())
-                            .field("create_time", DateTimeUtil.dateToString(new Date()))
-                            .field("update_time", DateTimeUtil.dateToString(new Date()))
+                            .field("article_heat", article.getArticleHeat())
+                            .field("create_time", DateTimeUtil.dateToString(new Date(),"yyyy-MM-dd"))
+                            .field("update_time", DateTimeUtil.dateToString(new Date(),"yyyy-MM-dd"))
                             .endObject()
                     )
                     .get();
@@ -86,6 +89,20 @@ public class ElasticsearchUtil{
         }
     }
 
+    public static ServerResponse getOwnArticle(List<String> articleIdList){
+        List<SearchElasticsearchArticleJson> searchElasticsearchArticleJsonList=new ArrayList<>();
+        for (String articleId : articleIdList){
+            GetResponse response = ElasticsearchConfig.getTransportClient().prepareGet("blog", "articles", articleId).get();
+            if (response!=null){
+                SearchElasticsearchArticleJson searchElasticsearchArticleJson=JsonUtil.stringToObj(response.getSourceAsString(),SearchElasticsearchArticleJson.class);
+                if (searchElasticsearchArticleJson!=null){
+                    searchElasticsearchArticleJsonList.add(searchElasticsearchArticleJson);
+                }
+            }
+        }
+        return ServerResponse.createBySuccess("GET索引成功",searchElasticsearchArticleJsonList);
+    }
+
     //DELETE AIP
     public static ServerResponse deleteElasticsearch(String articleId){
         DeleteResponse response = ElasticsearchConfig.getTransportClient().prepareDelete("blog", "articles", articleId).get();
@@ -105,7 +122,7 @@ public class ElasticsearchUtil{
         }
     }
 
-    //UPDATE API
+    //更新文章
     public static ServerResponse updateElasticsearch(Article article){
         UpdateRequest updateRequest = new UpdateRequest();
         UpdateResponse response=null;
@@ -117,7 +134,7 @@ public class ElasticsearchUtil{
                     .startObject()
                     .field("article_title", article.getArticleTitle())
                     .field("article_content",article.getArticleContent())
-                    .field("update_time",DateTimeUtil.dateToString(new Date()))
+                    .field("update_time",DateTimeUtil.dateToString(new Date(),"yyyy-MM-dd"))
                     .endObject());
             response=ElasticsearchConfig.getTransportClient().update(updateRequest).get();
         }  catch (InterruptedException | ExecutionException | IOException e) {
@@ -138,6 +155,39 @@ public class ElasticsearchUtil{
             return ServerResponse.createByErrorMessage("更新文档失败");
         }
     }
+
+    //更新文章热度,默认加一
+    public static ServerResponse updateElasticsearchArticleHeat(String articleId,Integer articleHeat){
+        UpdateRequest updateRequest = new UpdateRequest();
+        UpdateResponse response=null;
+        updateRequest.index("blog");
+        updateRequest.type("articles");
+        updateRequest.id(articleId);
+        try {
+            updateRequest.doc(jsonBuilder()
+                    .startObject()
+                    .field("article_heat", articleHeat+1)
+                    .endObject());
+            response=ElasticsearchConfig.getTransportClient().update(updateRequest).get();
+        }  catch (InterruptedException | ExecutionException | IOException e) {
+            e.printStackTrace();
+        }
+        if (response!=null&&response.getShardInfo().getSuccessful()>0){
+            ElasticsearchResult elasticsearchResult=new ElasticsearchResult(response.getResult().getOp(),response.getResult().getLowercase(),response.getResult().name(),response.getResult().ordinal());
+            ElasticsearchShardInfo elasticsearchShardInfo=new ElasticsearchShardInfo(response.getShardInfo().getTotal(),response.getShardInfo().getSuccessful(),response.getShardInfo().getFailures());
+            ElasticsearchResponse elasticsearchResponse=new ElasticsearchResponse(
+                    response.getId(),
+                    response.getType(),
+                    response.getVersion(),
+                    elasticsearchResult,
+                    elasticsearchShardInfo
+            );
+            return ServerResponse.createBySuccess("更新文档热点成功",elasticsearchResponse);
+        }else {
+            return ServerResponse.createByErrorMessage("更新文档热点失败");
+        }
+    }
+
 
     //search API （1）
     public static ServerResponse searchElasticsearch(String userInputText,int pageNum){
@@ -179,6 +229,40 @@ public class ElasticsearchUtil{
             }
             scrollResp = ElasticsearchConfig.getTransportClient().prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
         } while(scrollResp.getHits().getHits().length != 0); // Zero hits mark the end of the scroll and the while loop.
+        return null;
+    }
+
+    //首页推荐
+    public static ServerResponse homeSearchElasticsearch(Integer pageNum){
+        SearchResponse response = ElasticsearchConfig.getTransportClient().prepareSearch("blog")
+                .setTypes("articles")
+                .setFrom((pageNum-1)*10).setSize(10).setExplain(true)
+                .addSort(SortBuilders.fieldSort("article_heat").unmappedType("integer").order(SortOrder.DESC))
+                .get();
+        SearchHits hits = response.getHits();
+        if (hits.getTotalHits()!=0){
+            List<SearchElasticsearchArticleJson> searchElasticsearchArticleJsonList=new ArrayList<>();
+            for (SearchHit hit : hits) {
+                String json = hit.getSourceAsString();
+                SearchElasticsearchArticleJson searchElasticsearchArticleJson=JsonUtil.stringToObj(json,SearchElasticsearchArticleJson.class);
+                searchElasticsearchArticleJsonList.add(searchElasticsearchArticleJson);
+            }
+            Page page=new Page(pageNum,10,response.getHits().getTotalHits(),searchElasticsearchArticleJsonList);
+            return ServerResponse.createBySuccess(page);
+        }else {
+            return ServerResponse.createByErrorMessage("没有你想要搜索的数据");
+        }
+    }
+
+    //得到文章标题
+    public static String getArticleTitle(String articleId){
+        GetResponse response = ElasticsearchConfig.getTransportClient().prepareGet("blog", "articles", articleId).get();
+        if (response!=null){
+            SearchElasticsearchArticleJson searchElasticsearchArticleJson=JsonUtil.stringToObj(response.getSourceAsString(),SearchElasticsearchArticleJson.class);
+            if (searchElasticsearchArticleJson!=null){
+                return searchElasticsearchArticleJson.getArticle_title();
+            }
+        }
         return null;
     }
 
